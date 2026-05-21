@@ -74,26 +74,27 @@ The main goal was to build a workflow that can research a market, choose more re
 
 ## Visuals
 
+To make the parameter search easier to understand, I generated a dense parameter surface for the strongest candidate. The graph shows how different moving average windows and entry thresholds performed against each other, instead of only showing one final parameter choice.
 
-
-To make the parameter search easier to understand, I also generated a dense parameter surface for the strongest candidate. The graph shows how different moving average windows and entry thresholds performed against each other, instead of only showing one final parameter choice.
 ![XAGUSD 2D contour map](reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png)
 
+The 2D view is useful because it shows whether the result comes from a wider stable region or just one isolated peak.
 
-The static image gives a quick overview, and the interactive version can be opened separately to rotate and inspect the surface.
+The interactive version can be opened here:
 
 https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html
 
-
-
-
 ## Cross-market diagnostics
 
+I also compared the results across symbols, because I did not want the project to depend only on one good-looking market.
 
+![Cross-market performance](reports/readme_main_showcase/04_cross_market_result_by_symbol.png)
 
-![Cross-market performance](reports/readme_images/cross_market_result.png)
+## Risk diagnostics
 
+I also looked at the downside, not only the best-looking result.
 
+The risk chart compares the tested symbols by performance and drawdown behaviour. I included this because a parameter surface can look interesting, but the strategy is not useful if the downside is too unstable or if the result depends on one extreme move.
 
-![Risk diagnostics](reports/readme_images/risk_diagnostics.png)
+![Risk diagnostics by symbol](reports/readme_main_showcase/05_risk_diagnostics_by_symbol.png)
 
