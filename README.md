@@ -10,7 +10,7 @@
 
 
 
-This project is a iteration of the first project and this time a more general adaptive mean reversion system. The idea is still relatively simple, but I wanted to make it less fixed than my first project. Instead of only testing one asset and one manually chosen setup, this version first researches the market and then uses that research to choose parameter ranges that make more sense for that specific instrument.
+This project is an iteration of the first project and this time a more general adaptive mean reversion system. The idea is still relatively simple, but I wanted to make it less fixed than my first project. Instead of only testing one asset and one manually chosen setup, this version first researches the market and then uses that research to choose parameter ranges that make more sense for that specific instrument.
 The goal is to test whether the same general system can adapt across different market types such as commodities, equity indices, FX/currencies and Risk on Assests.
 
 ## Why I built this
