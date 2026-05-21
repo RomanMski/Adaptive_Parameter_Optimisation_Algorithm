@@ -56,6 +56,8 @@ The static image gives a quick overview, and the interactive version can be open
 
 ![XAGUSD dense 3D parameter surface](reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_3d_surface.png)
 
+https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html
+
 
 
 
