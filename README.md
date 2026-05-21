@@ -101,14 +101,13 @@ The main goal was to build a workflow that can research a market, choose more re
 
 
 To make the parameter search easier to understand, I also generated a dense parameter surface for the strongest candidate. The graph shows how different moving average windows and entry thresholds performed against each other, instead of only showing one final parameter choice.
-
+![XAGUSD 2D contour map](reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png)
 
 
 The static image gives a quick overview, and the interactive version can be opened separately to rotate and inspect the surface.
 
 https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html
 
-![XAGUSD 2D contour map](reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png)
 
 
 
