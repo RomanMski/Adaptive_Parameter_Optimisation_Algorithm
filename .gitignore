@@ -1,0 +1,13 @@
+﻿data/
+*.parquet
+*.zip
+*.7z
+*.pkl
+*.feather
+*.h5
+__pycache__/
+.venv/
+.env
+reports/**/adaptive_trades_*.csv
+reports/**/trades_v*.csv
+reports/**/XAGUSD_dense_parameter_grid.csv
