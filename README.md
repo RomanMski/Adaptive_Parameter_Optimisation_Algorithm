@@ -6,11 +6,6 @@
 
 
 
-[Open the interactive 3D parameter surface](https://romanmski.github.io/cross_market_adaptive_model/visuals/xagusd_parameter_surface.html)
-
-
-
-
 ## Idea
 
 
