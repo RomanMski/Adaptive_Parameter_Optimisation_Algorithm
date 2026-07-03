@@ -1,100 +1,145 @@
 # Adaptive Parameter Optimisation Algorithm
 
+[![Adaptive parameter research dashboard](reports/readme_main_showcase/00_project_hero.png)](https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html)
 
+This project is the next step after my first XAUUSD mean reversion research.
 
-[![XAGUSD dense parameter surface](reports/readme_images/hero_parameter_surface.png)](https://romanmski.github.io/cross_market_adaptive_model/visuals/xagusd_parameter_surface.html)
+The first version answered one narrow question: can a fixed moving average deviation setup show useful short horizon rebound behaviour after costs and stricter exits?
 
+This version asks a harder question. Can the system research a market first, find stable parameter regions, adapt the trade logic to the instrument, and still stay honest about costs, drawdown and overfitting?
 
+I am not publishing the exact private strategy, selected parameters, full search domains or execution rules. The public version is meant to show the research process, the diagnostics and the kind of thinking behind the system without giving away the edge.
 
-## Idea
+## The Core Idea
 
+Most simple mean reversion tests are too fixed.
 
+Pick one moving average. Pick one deviation. Pick one take profit. Backtest it. If it looks good, it is very tempting to call it a strategy.
 
-This project is an iteration of the first project and this time a more general adaptive mean reversion system. The idea is still relatively simple, but I wanted to make it less fixed than my first project. Instead of only testing one asset and one manually chosen setup, this version first researches the market and then uses that research to choose parameter ranges that make more sense for that specific instrument.
-The goal is to test whether the same general system can adapt across different market types such as commodities, equity indices, FX/currencies and Risk on Assests.
+That is exactly the trap I wanted to avoid.
 
-## Why I built this
+In this project the moving average, timeframe, entry deviation, position structure, exit logic and confidence threshold are treated as things the system has to research. The market is not forced into one manually chosen setup. The algorithm searches for areas where the signal appears often enough, where the exit distance is still realistic after costs, and where nearby parameter choices do not immediately collapse.
 
+The useful object is not one perfect parameter point. It is a parameter island.
 
+A parameter island is a region where many nearby setups behave similarly. One isolated peak can be luck. A broader island is more interesting because it suggests that the result is not only a tiny accident in the search space.
 
-The main issue with my first project was that the algorithm was not very adaptive and did not generalize well across different markets or market regimes. It worked on the specific asset and timeframe I had downloaded, but the results were fragile. Once fees, slippage, changing market conditions and different regimes are included, the strategy becomes much less useful as a general approach.
+<p align="center">
+  <img src="reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png" alt="XAGUSD dense parameter contour map" width="850">
+</p>
 
-I also had to manually research and choose the parameter ranges myself based on a relatively small dataset. That made the project more vulnerable to overfitting, because the parameters were chosen around the data I had instead of being part of a more general workflow.
+## How I Think About The System
 
+The base signal still starts with price as a deviation from a moving average.
 
+But the system around that signal is the important part.
 
-## How the system works
+For each market, the research layer scans a broad space first. It looks at moving average windows, deviation levels, volatility conditions, signal frequency and historical exit behaviour. Then it narrows the search into regions that look more useful.
 
+After that, the system can attach adapters to the strategy. These are not meant as decoration. They are there because a fixed rule can behave very differently when volatility changes, liquidity changes or the market moves into a different regime.
 
+The private research version explores adapters such as:
 
-The new approach is to merge the research step and the backtest step into one workflow. For each instrument, the algorithm first looks at the data and tests different combinations of moving average ranges, deviations from the moving average, volatility adjusted thresholds and the number of valid entry signals.
+- volatility estimation, including GARCH style regime information
+- gradient descent style refinement around promising parameter regions
+- Monte Carlo style stress checks for robustness and path sensitivity
+- confidence scoring from similar historical setups
+- portfolio allocation when several sleeves compete for the same capital
+- cost, slippage and fill realism checks
 
+The exact implementation details are not public, because that is where the real edge would live. The public point is the research structure.
 
-The idea is not to test every possible setting forever, but to narrow the search space to the areas where there are enough signals and where the average exit is large enough to still make sense after fees and slippage.
+## Confidence Instead Of Blind Entries
 
-For example, the algorithm may start with a broad moving average range like MA50 to MA2000. After looking at the data, it might narrow the useful area down to something like MA300 to MA500, if that is where the signal appears often enough and where enough trades also have a realistic exit point. So instead of forcing the same setup on every market, each market gets its own researched parameter area.
+Not every entry signal should be treated the same.
 
-Every buy signal then gets assigned a confidence score. The confidence is based on where the signal lies compared to similar signals in the past. If similar signals historically had a higher probability of reaching take profit, then the current signal gets a higher confidence score. If the signal bucket was weaker or less reliable, the confidence is lower.
+If a setup looks similar to past situations where price often reached the researched take profit, it should receive more confidence. If the sample is weak, noisy or historically poor after costs, it should receive less confidence or be ignored.
 
-The confidence score then affects the trade itself. Higher confidence can mean a bigger position size and more room for the trade to develop, while lower confidence should mean a smaller position and a tighter exit. The idea is that not every signal should be treated the same, because some signals are historically much stronger than others.
+That confidence can affect the trade in several ways. It can change whether the signal is taken, how much capital is allocated, how much room the trade receives, and whether a partial exit is more sensible than waiting for the full target.
 
+This is also why the system cannot only optimise raw return. A high return setup is not automatically better if it comes from one rare event, one unstable parameter point or one fragile market regime.
 
+## Entries, Exits And Time
 
-## Stops and exits
+The first version taught me that the exit logic matters as much as the entry.
 
+Some trades failed because they were held too long. Some trades were cut too early. Some losing trades were actually decent signals, but the time stop was too rigid. That does not mean the stop was wrong. It means the stop itself should be researched instead of guessed.
 
+So the system studies holding time distributions, successful trade lengths, failed trade lengths and the behaviour around take profit zones. A simple version can use a Q3 or IQR based time cutoff. A more adaptive version can make the cutoff depend on the setup quality, volatility and current trade behaviour.
 
-The system also uses a time based stop. If a trade stays open for too long, it probably no longer behaves like the original mean reversion setup. So instead of letting trades stay open forever, the algorithm cuts them after a certain holding time.
+The same idea applies to exits. A trade can sell at the first target, keep a smaller part open, sell on retrace, or exit when the probability of reaching a better target becomes too weak. These choices have to be tested against a baseline, not added emotionally because one chart looked annoying.
 
-This cutoff can be based on the historical holding time distribution. A simple version is to cut trades above the third quartile, also called Q3. A stricter version would use an IQR based cutoff like Q3 plus 1.5 times the IQR, which is a common way to detect values that are unusually far away from the normal range.
+<p align="center">
+  <img src="reports/readme_main_showcase/03_best_vs_worst_actual_trade_story.png" alt="Best and worst actual trade examples" width="850">
+</p>
 
-The point of that is to remove trades that take unusually long and are more likely to become low quality positions.
+## Cross Market Testing
 
+I did not want this to be a project that only looks good on one chart.
 
+The system was tested across different kinds of markets, including commodities, FX, equity indices and risk on assets. The point was not to pretend that one universal setting works everywhere. The point was to see where the adaptive workflow finds useful regions and where it fails.
 
-## What I noticed after the first backtest
+That distinction matters. A negative result on some markets is not embarrassing. It is useful because it shows that the system is not simply being forced to say yes.
 
+<p align="center">
+  <img src="reports/readme_main_showcase/04_cross_market_result_by_symbol.png" alt="Cross market result by symbol" width="850">
+</p>
 
+## Risk Diagnostics
 
-After the first backtest the results looked promising, but when I looked at some of the upside and downside outliers, I noticed that the entry and exit logic was still too rigid. A lot of trades were closing slightly negative, while some stronger moves had their upside capped too early.
+I care much more about how a result survives stress than how good one final number looks.
 
-So the issue was not only finding entries, but also managing the trade after entry. The next idea is to make both entries and exits more adaptive. If the confidence of the signal is higher, the system should allow more flexibility. That could mean a larger position size, a wider possible entry area if price deviates further from the moving average, and also a more flexible exit.
+The diagnostics look at drawdown, profit factor, Sharpe behaviour, cost sensitivity and whether performance depends too much on one symbol or one market condition. A surface can look beautiful, but if the downside is unstable or the result disappears after slightly worse costs, I do not trust it.
 
-For the exit, the idea is to sell most of the position at the first take profit level, but keep a smaller part open if the confidence is high enough. That remaining part could then aim for higher take profit levels in a grid like way, while still being liquidated if price falls a certain percentage below the target area.
+<p align="center">
+  <img src="reports/readme_main_showcase/05_risk_diagnostics_by_symbol.png" alt="Risk diagnostics by symbol" width="850">
+</p>
 
-These examples show one strong trade and one weak trade from the actual saved backtest. I included both because I wanted to see what the system really did around entry and exit, not only the final summary statistics.
+## What The Visuals Show
 
-The main goal was to build a workflow that can research a market, choose more reasonable parameter ranges, assign confidence to signals and then show clearly where the system works and where it fails.
+The dense parameter surface is useful because it makes the search space visible. Instead of only showing the final choice, it shows whether a candidate sits inside a stable region or on a sharp isolated peak.
 
+<p align="center">
+  <img src="reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_3d_surface.png" alt="XAGUSD dense parameter surface" width="850">
+</p>
 
+There is also an interactive version of the parameter surface here:
 
-![Best and worst trade examples](reports/readme_images/trade_examples.png)
+[Open the interactive XAGUSD parameter surface](https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html)
 
+## What This Project Shows
 
+This repository shows that I can take an idea, turn it into a research process, build diagnostics around it and be honest about what can go wrong.
 
-## Visuals
+The important parts are:
 
-To make the parameter search easier to understand, I generated a dense parameter surface for the strongest candidate. The graph shows how different moving average windows and entry thresholds performed against each other, instead of only showing one final parameter choice.
+- market specific parameter research
+- parameter island thinking instead of single point optimisation
+- adaptive entries and exits
+- confidence based signal quality
+- volatility and regime aware adapter design
+- Monte Carlo and cost stress thinking
+- cross market diagnostics
+- risk checks instead of only headline return
 
-![XAGUSD 2D contour map](reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png)
+## What This Project Does Not Show
 
-The 2D view is useful because it shows whether the result comes from a wider stable region or just one isolated peak.
+This is not a trading bot someone can clone and run.
 
-The interactive version can be opened here:
+It does not publish the exact private strategy, live deployment setup, final sleeve weights, selected execution rules or full search space. It also should not be read as financial advice or proof of future profitability.
 
-https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html
+The goal is to show the research quality without giving away the parts that would make the strategy easy to copy.
 
-## Cross-market diagnostics
+## Relation To The First Project
 
-I also compared the results across symbols, because I did not want the project to depend only on one good-looking market.
+The first project was the XAUUSD intraday mean reversion study. It showed that some mean reversion behaviour exists, but that the edge is fragile under transaction costs and stricter exits.
 
-![Cross-market performance](reports/readme_main_showcase/04_cross_market_result_by_symbol.png)
+This project is my answer to that problem. Instead of manually picking one setup, the system researches the market, searches for stable regions, checks risk and then builds more adaptive rules around the signal.
 
-## Risk diagnostics
+The first project asked whether the signal exists.
 
-I also looked at the downside, not only the best-looking result.
+This project asks whether the process can find and manage better versions of that signal.
 
-The risk chart compares the tested symbols by performance and drawdown behaviour. I included this because a parameter surface can look interesting, but the strategy is not useful if the downside is too unstable or if the result depends on one extreme move.
+## Tools
 
-![Risk diagnostics by symbol](reports/readme_main_showcase/05_risk_diagnostics_by_symbol.png)
-
+Python, pandas, NumPy, matplotlib, Plotly, statistical testing, parameter surface analysis, volatility modelling, gradient descent style refinement, Monte Carlo stress testing and backtest diagnostics.
