@@ -1,5 +1,5 @@
-# Adaptive parameter research visuals
+# Adaptive parameter research visual
 
-This small GitHub Pages site hosts the public interactive visual from the adaptive parameter research project. The repository is a redacted portfolio version of a larger private research system, so the exact private candidate and execution rules are intentionally not included.
+This page contains the interactive parameter surface used in the public extract of my larger quantitative research project. It is one diagnostic from the parameter search and can be rotated, zoomed and inspected directly.
 
 [Open the interactive parameter surface](visuals/xagusd_parameter_surface.html)

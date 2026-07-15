@@ -1,53 +1,53 @@
-# Adaptive Parameter Optimisation Algorithm
+# Adaptive Parameter Optimisation
 
-This repository is a redacted public view of a private quantitative research project I have been building for months. The private system is about adaptive parameter search, execution aware backtesting and capital allocation across competing signals. This public version is not meant to be a cloneable trading strategy. It is meant to show the research architecture and the level of validation behind the work, while keeping the actual edge private.
+This repository is a selected extract from a larger private quantitative research project I have been working on for several months. The complete workspace now contains roughly 500 GB of raw market data, processed datasets and generated research artifacts. One of the larger search and validation cycles ran for about five days on a high specification cloud VM. I cannot publish the whole workspace, but this extract shows the part that matters most: how the research question developed, what failed, how I found the problems, and what I changed because of them.
 
-The starting point was a simple problem I kept running into: a fixed setup can look good in one market, one volatility regime or one hand picked window, and then become useless as soon as costs, execution or market structure changes. I did not want to keep manually choosing one moving average, one deviation and one exit rule and then overinterpreting the best result. The more interesting question was whether the system could research the market first, map the parameter space, find stable regions, and then reject candidates that only worked because the search process gave them too many chances to get lucky.
+The project started with a simple frustration. Picking one moving average, one entry threshold and one exit rule by hand can produce a convincing backtest, but the result says very little about whether the parameters describe something stable or just one lucky point. I wanted to map the surrounding parameter space, preserve wider regions that remained useful, and test those regions under different periods, costs and execution assumptions. As the search grew, the project stopped being only an optimisation problem. It became a data engineering, causal timing, portfolio accounting and model validation problem as well.
 
-The private implementation has more moving parts than this repository shows. Exact markets, candidate identities, search domains, final parameters, sleeve weights, execution logic and live deployment details are intentionally not public. Those are the parts that would make the research too easy to copy. The public layer focuses on the part I actually want to show: how I think about parameter surfaces, overfitting, execution assumptions, skipped opportunities, capital competition and robustness.
+![Research system overview](reports/readme_main_showcase/06_public_research_loop.png)
 
-![Adaptive parameter research architecture](reports/readme_main_showcase/06_public_research_loop.png)
+## From an idea to a research system
 
-The core idea is parameter island thinking. I do not trust a single best point very much. If a candidate only works at one exact coordinate and collapses around it, that usually says more about the search process than about the market. A wider area of similar results is more interesting because it suggests that the candidate is not just a tiny accident in a high dimensional grid. This is why the project looks at the shape around a candidate, not only the headline return.
+Working with second and minute data across multiple markets, timeframes and candidate families made a naive exhaustive search too expensive and too difficult to audit. The larger runs produced enough intermediate data that I had to treat the research pipeline as a system. Raw archives are checksum verified, timestamps are normalised, price bar invariants and gaps are checked, processed data is stored in Parquet, and reusable timeframe caches keep repeated work manageable. Candidates receive deterministic identities and every serious run writes its configuration and output metadata to a manifest. Long jobs are separated into restartable stages so that a failure near the end does not erase days of compute.
 
-This also changed how I treated the backtest itself. The backtest is not the end of the research. It is one object that has to be attacked from multiple angles. I care about neighbouring parameters, different time windows, worse costs, worse fills, drawdown shape, concentration, and whether the logic could be regenerated from new bars without looking into the future. A clean equity curve is not enough if it cannot survive those questions.
+This was one of the main lessons from the project. Compute scale is only useful when every result can be traced back to the exact data, configuration and assumptions that created it. A five day run that cannot be reproduced is less valuable than a smaller run that can be audited properly.
 
-![Robustness gates](reports/readme_main_showcase/07_public_robustness_gates.png)
-
-The harder part became allocation. Once multiple signals or sleeves exist, the system is no longer only asking whether one signal is good. It has to decide whether that signal is the best use of capital at that moment. A position can be profitable and still block a better opportunity. A new signal can look strong but be less useful than a trade already open. This pushed the project away from isolated strategy testing and toward portfolio replay with skipped opportunities, capital constraints and execution realism included in the research loop.
-
-The public examples below are simplified or older diagnostics. They are included to make the research process visible, not to reveal the current private candidate. The dense surface shows why I care about the geometry of the search space. A surface that contains broad stable regions tells a different story than one sharp peak surrounded by failure.
+Parameter search created a second problem. The best point in a large grid is often the point that benefited most from chance. I therefore stopped treating the optimum as the research object and started looking at the local surface around it. Neighbour support, separate time windows, monthly return distributions, drawdown, concentration and cost sensitivity all became part of the candidate decision. A broad region that behaves similarly is more interesting than a sharp isolated maximum, although it is still only a candidate and not proof.
 
 <p align="center">
-  <img src="reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png" alt="Dense parameter contour map" width="850">
+  <img src="reports/dense_parameter_surface_xagusd/XAGUSD_sum_net_pct_dense_contour_map.png" alt="Dense parameter surface" width="900">
 </p>
 
-There is also an interactive version of the parameter surface here:
+The same surface can be explored in an [interactive three dimensional view](https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html).
 
-[Open the interactive parameter surface](https://romanmski.github.io/Adaptive_Parameter_Optimisation_Algorithm/visuals/xagusd_parameter_surface.html)
+## What went wrong
 
-One of the biggest lessons was that exits and holding time are not secondary details. Some trades were not bad because the original signal was useless. They were bad because the exit logic did not fit the path that followed. Other trades looked good only because the assumed fill was too generous. That is why the diagnostics include actual trade paths, holding windows, take profit behaviour and failure cases instead of only summarising final return.
+The most important error I found was not a crash or a wrong formula. A regime feature was timestamped at the start of an hourly bar even though it used the completed close of that hour. This allowed information from the future to enter the decision process. The original system could be reproduced exactly, which was useful as a control, but exact reproduction did not make it causal. I separated those two questions, shifted the feature to the first time it was actually available, regenerated the signals from raw data, and froze the corrected candidate before looking at later data.
 
-<p align="center">
-  <img src="reports/readme_main_showcase/03_best_vs_worst_actual_trade_story.png" alt="Best and worst trade examples" width="850">
-</p>
+The corrected version still looked strong on selected history, but it failed a clean future window and became weaker under harsher cost assumptions. I rejected it for deployment. I have not made the historical return the headline of this repository because the more useful result was the failure itself. The audit showed that a large backtest can survive code reproduction while still failing causality and forward validation.
 
-I also wanted the research to show where the idea fails. A model that only presents the best market is not very useful. Cross market tests are useful because negative evidence defines the boundary of the system. If the same workflow works in one environment and fails in another, that is information. It tells me whether I am looking at a general process, a market specific effect, or just a lucky pocket.
+![Causal audit and decision path](reports/readme_main_showcase/08_causal_audit_path.png)
 
-<p align="center">
-  <img src="reports/readme_main_showcase/04_cross_market_result_by_symbol.png" alt="Cross market result by symbol" width="850">
-</p>
+Execution assumptions caused another change. A candle high touching a limit price does not prove that the order would have filled. An equity curve updated only at trade events can also hide losses that existed while a position was open. I added fee and slippage stress, stricter limit fill requirements, minute level mark to market reconstruction, a low price risk envelope, and reconciliation between the cash ledger and final equity. These checks made the execution model less flattering and more useful.
 
-The risk diagnostics are there for the same reason. I do not want to judge a candidate by one return number. I want to know how much drawdown it needed, how fragile the profit factor was, how sensitive it was to costs, and whether the result depended too much on one market condition. If I cannot explain why a candidate survived, I do not want to trust it.
+Shared capital created a separate accounting problem. When several signals arrive together, not all of them can receive the capital assumed by their standalone backtests. Some are fully funded, some only partly, and others have to be skipped. Replaying every accepted signal through one cash constrained portfolio showed why adding isolated strategy returns together was wrong and made the opportunity cost of an open position visible.
 
-<p align="center">
-  <img src="reports/readme_main_showcase/05_risk_diagnostics_by_symbol.png" alt="Risk diagnostics by symbol" width="850">
-</p>
+![Validation problems and responses](reports/readme_main_showcase/07_public_robustness_gates.png)
 
-This project became less about finding one impressive backtest and more about building a research process that is harder to fool. The useful work was in turning a messy idea into testable components, building diagnostics around each failure mode, and forcing the system to keep track of what was searched, what was rejected, and what still needs stronger evidence.
+## What changed
 
-The public repository should therefore be read as a research showcase, not a trading product. It demonstrates adaptive parameter search, parameter surface analysis, robustness thinking, execution aware backtesting, trade path diagnostics and capital allocation reasoning. It does not publish the current private strategy, live system, final parameters, selected candidates or execution rules.
+The system now treats data availability and evaluation history as part of the research state. A gap invalidates new signals until a complete feature window has been rebuilt. Once an evaluation period has been inspected, it cannot later be described as a fresh holdout. A change to the logic creates a new candidate identity instead of quietly replacing the old one. Results are broken down by time, market and contribution so that one exceptional period cannot hide a weak base.
 
-This is not financial advice and it is not proof of future profitability. It is a redacted view into an ongoing private quant research project.
+The optimiser can rank candidates and decide where to spend compute, but it does not make the final decision. The final decision uses several views of the same candidate: neighbouring parameters, performance across time, mark to market drawdown, cost and fill stress, concentration, activity, and the future test. Before a serious run, I now try to define what evidence would disqualify the candidate. That makes rejection part of the method rather than something explained away after the result is known.
 
-The public stack is mainly Python, pandas, NumPy, matplotlib, Plotly, parameter surface analysis, backtest diagnostics, stress testing and research visualization.
+## What I learned
+
+The most useful technical work was spread across Python, NumPy, pandas, Numba, Parquet, vectorised transformations, causal resampling, deterministic configuration hashing, run manifests, cloud compute, backtest engineering, portfolio cash accounting, mark to market risk, stress testing and research visualisation. The harder lesson was that complexity is not the same as quality. A more complicated model can create more ways to be wrong, and a larger search can create more convincing false winners.
+
+I also learned to separate four things that are easy to mix together: the idea I want to test, the behaviour that is actually implemented, the result observed in a particular run, and the evidence required before deployment. Keeping those layers separate made it possible to reproduce an old result, find a causal defect in it, correct the defect, and then accept that the corrected candidate failed its future test.
+
+The remaining work is clear. Lower level order book replay, stronger controls for repeated testing, and longer paper trading windows using only future data still need more evidence. This repository does not claim that the research problem is solved. It shows how the project became more rigorous after the first attractive answers turned out to be incomplete.
+
+The repository contains selected parameter surfaces, validation diagrams, older trade diagnostics and an interactive visual. The overview figures can be regenerated with the small Matplotlib builder in `tools`. The full datasets and research system are not included because of their size and because the work is still ongoing.
+
+This is an ongoing research project, not a trading recommendation.
