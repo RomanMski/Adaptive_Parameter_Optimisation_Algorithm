@@ -1,5 +1,5 @@
-# Adaptive parameter research visual
+# Adaptive Portfolio Research System
 
-This page contains the interactive parameter surface used in the public extract of my larger quantitative research project. It is one diagnostic from the parameter search and can be rotated, zoomed and inspected directly.
+The public case study is maintained in the main repository README. It explains the sleeve based research design, confidence logic, shared capital replay and the causal audit that led to a candidate being rejected.
 
-[Open the interactive parameter surface](visuals/xagusd_parameter_surface.html)
+[Open the full public case study](https://github.com/RomanMski/Adaptive_Parameter_Optimisation_Algorithm)
